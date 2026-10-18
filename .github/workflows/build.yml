@@ -47,29 +47,40 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          set -o pipefail
           D=$(dirname "$(find . -name settings.gradle -not -path '*/build/*' | head -1)")
           [ -z "$D" ] && D="."
           echo "工程目录: $D"
           cd "$D"
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           echo "org.gradle.jvmargs=-Xmx2048m" > gradle.properties
-          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tail -120
+          gradle assembleDebug --no-daemon --stacktrace > build.log 2>&1
+          echo "gradle退出码=$?"
+          echo "===== What went wrong ====="
+          awk '/What went wrong:/,0' build.log | head -40
+          echo "===== 所有 error 行 ====="
+          grep -n -i "error:" build.log | head -40
+          echo "===== Caused by ====="
+          grep -A 8 "Caused by" build.log | head -50
+          echo "===== 最后80行 ====="
+          tail -80 build.log
+          cp build.log /tmp/build.log || true
+          true
 
-      - name: Collect and push APK
+      - name: Collect and push
         if: always()
         run: |
           mkdir -p /tmp/apks
+          [ -f /tmp/build.log ] && cp /tmp/build.log /tmp/apks/
           find . -name "*.apk" -not -path "*/intermediates/*" -exec cp {} /tmp/apks/ \;
-          echo "=== APK列表 ==="
+          echo "=== 产出文件 ==="
           ls -la /tmp/apks/
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git checkout --orphan apk 2>/dev/null || git checkout apk
           git rm -rf . 2>/dev/null || true
-          cp /tmp/apks/*.apk . 2>/dev/null || echo "无APK"
-          git add -f *.apk 2>/dev/null || true
-          git commit -m "APK $(date +%Y%m%d-%H%M%S)" 2>/dev/null || echo "无文件提交"
+          cp /tmp/apks/* . 2>/dev/null || echo "无文件"
+          git add -f * 2>/dev/null || true
+          git commit -m "build output $(date +%Y%m%d-%H%M%S)" 2>/dev/null || echo "无提交"
           git push -f origin apk 2>&1 | tail -3
 
       - name: Upload artifact
@@ -77,5 +88,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: '/tmp/apks/*.apk'
+          path: '/tmp/apks/*'
           if-no-files-found: warn
