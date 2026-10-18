@@ -1,17 +1,130 @@
-      - name: Build Debug APK
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Android SDK
         run: |
-          D=$(dirname "$(find . -name settings.gradle -not -path '*/build/*' | head -1)")
-          [ -z "$D" ] && D="."
-          echo "工程目录: $D"
-          cd "$D"
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "org.gradle.jvmargs=-Xmx2048m" > gradle.properties
-          gradle assembleDebug --no-daemon --stacktrace > /tmp/build.log 2>&1 || echo "gradle失败，退出码=$?"
-          echo "===== What went wrong ====="
-          awk '/What went wrong:/,0' /tmp/build.log | head -40
-          echo "===== error行 ====="
-          grep -n -i "error:" /tmp/build.log | head -40
-          echo "===== Caused by ====="
-          grep -A 8 "Caused by" /tmp/build.log | head -60
-          echo "===== 最后100行 ====="
-          tail -100 /tmp/build.log
+          set -e
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd /tmp
+          curl -sSL -o cmd.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          cd $HOME/android-sdk/cmdline-tools
+          unzip -q /tmp/cmd.zip
+          rm -f /tmp/cmd.zip
+          [ -d cmdline-tools ] && { rm -rf latest; mv cmdline-tools latest; }
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Install SDK packages
+        run: |
+          yes 2>/dev/null | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -10
+          ls $ANDROID_HOME/build-tools/34.0.0/
+
+      - name: Build APK with aapt2 and d8
+        run: |
+          set -x
+          SDK=$ANDROID_HOME
+          BT=$SDK/build-tools/34.0.0
+          AAPT2=$BT/aapt2
+          D8=$BT/d8
+          ZIPALIGN=$BT/zipalign
+          APKSIGNER=$BT/apksigner
+          ANDROID_JAR=$SDK/platforms/android-34/android.jar
+
+          PROJ_REL=$(dirname "$(find . -name settings.gradle -not -path '*/build/*' | head -1)")
+          [ -z "$PROJ_REL" ] && PROJ_REL="."
+          PROJ=$(cd "$PROJ_REL" && pwd)
+          echo "工程目录: $PROJ"
+          cd "$PROJ"
+
+          SRC=$PROJ/app/src/main
+          STUB=$PROJ/xposedstub/src/main/java
+          OUT=$PROJ/out
+          rm -rf $OUT
+          mkdir -p $OUT/gen $OUT/obj $OUT/apk $OUT/assets/assets
+
+          echo "--- 1 aapt2 编译资源 ---"
+          $AAPT2 compile --dir $SRC/res -o $OUT/res.zip
+
+          echo "--- 2 aapt2 link 生成 R.java ---"
+          $AAPT2 link -I $ANDROID_JAR \
+            --manifest $SRC/AndroidManifest.xml \
+            --java $OUT/gen \
+            --min-sdk-version 26 --target-sdk-version 34 \
+            --version-code 1 --version-name "v1.0" \
+            --auto-add-overlay \
+            -o $OUT/apk/base.apk $OUT/res.zip
+
+          echo "--- 3 javac 编译 ---"
+          find $SRC/java $STUB $OUT/gen -name "*.java" > $OUT/sources.txt
+          cat $OUT/sources.txt
+          javac -nowarn -encoding UTF-8 -source 8 -target 8 \
+            -cp $ANDROID_JAR -d $OUT/obj @$OUT/sources.txt 2>&1 | head -40
+
+          echo "--- 4 d8 转 dex ---"
+          cd $OUT/obj
+          jar cf $OUT/classes.jar .
+          cd "$PROJ"
+          $D8 --lib $ANDROID_JAR --output $OUT/apk $OUT/classes.jar
+
+          echo "--- 5 合并 dex 与 assets ---"
+          cp $SRC/assets/xposed_init $OUT/assets/assets/
+          cd $OUT/assets
+          zip -q $OUT/apk/base.apk assets/xposed_init
+          cd $OUT/apk
+          zip -q base.apk classes.dex
+          unzip -l base.apk
+
+          echo "--- 6 zipalign ---"
+          $ZIPALIGN -f 4 base.apk aligned.apk
+
+          echo "--- 7 签名 ---"
+          keytool -genkeypair -keystore $OUT/ks.jks -alias k -keyalg RSA -keysize 2048 \
+            -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=jiumingmao" 2>&1 | head -3
+          $APKSIGNER sign --ks $OUT/ks.jks --ks-pass pass:123456 --key-pass pass:123456 \
+            --out app-debug.apk aligned.apk
+
+          echo "--- 完成 ---"
+          ls -la $OUT/apk/*.apk
+
+      - name: Push APK to branch
+        if: always()
+        run: |
+          mkdir -p /tmp/out
+          find . -name "app-debug.apk" -exec cp {} /tmp/out/ \;
+          ls -la /tmp/out/
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout --orphan apk 2>/dev/null || git checkout apk
+          git rm -rf . 2>/dev/null || true
+          cp /tmp/out/*.apk . 2>/dev/null || echo "无APK"
+          git add -f *.apk 2>/dev/null || true
+          git commit -m "APK $(date +%Y%m%d-%H%M%S)" 2>/dev/null || echo "无提交"
+          git push -f origin apk 2>&1 | tail -3
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: '**/app-debug.apk'
+          if-no-files-found: warn
