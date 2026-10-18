@@ -62,46 +62,36 @@ jobs:
           rm -rf $OUT
           mkdir -p $OUT/gen $OUT/obj $OUT/apk $OUT/assets/assets
 
+          echo "--- 0 注入 package 属性 ---"
+          grep -q 'package=' $SRC/AndroidManifest.xml || sed -i '0,/<manifest /s|<manifest |<manifest package="com.jiumingmao.statbar" |' $SRC/AndroidManifest.xml
+          head -3 $SRC/AndroidManifest.xml
+
           echo "--- 1 aapt2 编译资源 ---"
           $AAPT2 compile --dir $SRC/res -o $OUT/res.zip
 
-          echo "--- 2 aapt2 link 生成 R.java ---"
-          $AAPT2 link -I $ANDROID_JAR \
-            --manifest $SRC/AndroidManifest.xml \
-            --java $OUT/gen \
-            --min-sdk-version 26 --target-sdk-version 34 \
-            --version-code 1 --version-name "v1.0" \
-            --auto-add-overlay \
-            -o $OUT/apk/base.apk $OUT/res.zip
+          echo "--- 2 aapt2 link ---"
+          $AAPT2 link -I $ANDROID_JAR --manifest $SRC/AndroidManifest.xml --java $OUT/gen --min-sdk-version 26 --target-sdk-version 34 --version-code 1 --version-name "v1.0" --auto-add-overlay -o $OUT/apk/base.apk $OUT/res.zip
 
-          echo "--- 3 javac 编译 ---"
+          echo "--- 3 javac ---"
           find $SRC/java $STUB $OUT/gen -name "*.java" > $OUT/sources.txt
-          cat $OUT/sources.txt
-          javac -nowarn -encoding UTF-8 -source 8 -target 8 \
-            -cp $ANDROID_JAR -d $OUT/obj @$OUT/sources.txt 2>&1 | head -40
+          javac -nowarn -encoding UTF-8 -source 8 -target 8 -cp $ANDROID_JAR -d $OUT/obj @$OUT/sources.txt 2>&1 | head -50
 
           echo "--- 4 d8 转 dex ---"
-          cd $OUT/obj
-          jar cf $OUT/classes.jar .
-          cd "$PROJ"
+          cd $OUT/obj && jar cf $OUT/classes.jar . && cd "$PROJ"
           $D8 --lib $ANDROID_JAR --output $OUT/apk $OUT/classes.jar
 
           echo "--- 5 合并 dex 与 assets ---"
-          cp $SRC/assets/xposed_init $OUT/assets/assets/
-          cd $OUT/assets
-          zip -q $OUT/apk/base.apk assets/xposed_init
-          cd $OUT/apk
-          zip -q base.apk classes.dex
-          unzip -l base.apk
+          cp $SRC/assets/xposed_init $OUT/assets/assets/ 2>/dev/null
+          cd $OUT/assets && zip -q $OUT/apk/base.apk assets/xposed_init && cd "$PROJ"
+          cd $OUT/apk && zip -q base.apk classes.dex && cd "$PROJ"
+          unzip -l $OUT/apk/base.apk
 
           echo "--- 6 zipalign ---"
-          $ZIPALIGN -f 4 base.apk aligned.apk
+          $ZIPALIGN -f 4 $OUT/apk/base.apk $OUT/apk/aligned.apk
 
           echo "--- 7 签名 ---"
-          keytool -genkeypair -keystore $OUT/ks.jks -alias k -keyalg RSA -keysize 2048 \
-            -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=jiumingmao" 2>&1 | head -3
-          $APKSIGNER sign --ks $OUT/ks.jks --ks-pass pass:123456 --key-pass pass:123456 \
-            --out app-debug.apk aligned.apk
+          keytool -genkeypair -keystore $OUT/ks.jks -alias k -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=jiumingmao" 2>&1 | head -3
+          $APKSIGNER sign --ks $OUT/ks.jks --ks-pass pass:123456 --key-pass pass:123456 --out $OUT/apk/app-debug.apk $OUT/apk/aligned.apk
 
           echo "--- 完成 ---"
           ls -la $OUT/apk/*.apk
