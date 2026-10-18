@@ -12,6 +12,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Diagnose project layout
+        run: |
+          echo "===== 目录结构 ====="
+          find . -maxdepth 3 -not -path './.git*' | head -60
+          echo "===== settings.gradle 位置 ====="
+          find . -name settings.gradle -not -path '*/build/*'
+          echo "===== gradle wrapper ====="
+          find . -name "gradle-wrapper.jar" -o -name "gradlew" | head
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -24,37 +33,27 @@ jobs:
       - name: Accept SDK licenses
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME" 2>/dev/null || echo "SDK 目录为空"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.2'
-
-      - name: Find project root
-        id: findroot
-        run: |
-          if [ -f settings.gradle ]; then
-            echo "dir=." >> $GITHUB_OUTPUT
-          else
-            D=$(dirname "$(find . -name settings.gradle -not -path '*/build/*' | head -1)")
-            echo "dir=${D:-.}" >> $GITHUB_OUTPUT
-          fi
+          gradle-version: '8.5'
 
       - name: Build Debug APK
         run: |
-          cd "${{ steps.findroot.outputs.dir }}"
-          chmod +x gradlew 2>/dev/null || true
-          if [ -f gradle/wrapper/gradle-wrapper.jar ]; then
-            ./gradlew assembleDebug --no-daemon
-          else
-            gradle assembleDebug --no-daemon
-          fi
+          D=$(dirname "$(find . -name settings.gradle -not -path '*/build/*' | head -1)")
+          [ -z "$D" ] && D="."
+          echo "===== 工程目录: $D ====="
+          cd "$D"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tail -80
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: |
-            **/app/build/outputs/apk/debug/*.apk
+          path: '**/app/build/outputs/apk/debug/*.apk'
           if-no-files-found: warn
