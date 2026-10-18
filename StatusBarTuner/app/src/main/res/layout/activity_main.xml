@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF121212"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tip_scope"
+            android:textColor="#FFAAAAAA"
+            android:textSize="12sp"
+            android:paddingBottom="16dp" />
+
+        <!-- 总开关 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="启用调整"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+
+            <Switch
+                android:id="@+id/swEnabled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- 时间位置 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="状态栏时间"
+            android:textColor="#FF64B5F6"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="位置"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+
+        <Spinner
+            android:id="@+id/spClockPos"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvClockX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="时间左右：0 dp"
+            android:textColor="#FFCCCCCC"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/sbClockX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvClockY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="时间上下：0 dp"
+            android:textColor="#FFCCCCCC"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/sbClockY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="12dp" />
+
+        <!-- 电池位置 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="状态栏电池"
+            android:textColor="#FF64B5F6"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="位置"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+
+        <Spinner
+            android:id="@+id/spBattPos"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvBattX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="电池左右：0 dp"
+            android:textColor="#FFCCCCCC"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/sbBattX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tvBattY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="电池上下：0 dp"
+            android:textColor="#FFCCCCCC"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/sbBattY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="16dp" />
+
+        <!-- 按钮 -->
+        <Button
+            android:id="@+id/btnApply"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="应用" />
+
+        <Button
+            android:id="@+id/btnRestartUi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="重启系统界面（需要 Root）"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/btnReset"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="恢复默认"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tip_usage"
+            android:textColor="#FF888888"
+            android:textSize="12sp"
+            android:paddingTop="20dp" />
+
+    </LinearLayout>
+
+</ScrollView>

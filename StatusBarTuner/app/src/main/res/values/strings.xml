@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">状态栏时间电池调整 v1.0</string>
+    <string name="xposed_desc">状态栏时间与电池的左右位置和上下偏移调整（作者：九命猫）</string>
+    <string name="tip_scope">需在 LSPosed 中启用本模块，并把作用域勾选为「系统界面」，然后重启系统界面。</string>
+    <string name="tip_usage">说明：\n1. 位置选择后点「应用」，多数情况立即生效。\n2. 没变化就点「重启系统界面」。\n3. 左右/上下微调是视觉位移（dp），不会挤压其他图标。\n4. 恢复默认可将所有设置清零。\n5. 作者：九命猫</string>
+</resources>

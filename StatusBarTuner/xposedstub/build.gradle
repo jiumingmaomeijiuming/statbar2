@@ -1,0 +1,11 @@
+plugins {
+    id 'java-library'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+// 这是纯编译期 stub，运行时由 LSPosed 提供真实的 Xposed API
+// 因此 app 模块用 compileOnly 引用，不会打包进 APK

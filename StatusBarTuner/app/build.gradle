@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.jiumingmao.statbar'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.jiumingmao.statbar"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "v1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    packagingOptions {
+        exclude 'META-INF/**'
+    }
+}
+
+dependencies {
+    // Xposed API 编译期 stub（本地 module，无需联网下载）
+    // 运行时由 LSPosed 提供真实实现，不会被打包进 APK
+    compileOnly project(':xposedstub')
+
+    // 本模块只使用 Android 原生控件，无第三方依赖
+}
